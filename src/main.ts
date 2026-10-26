@@ -1,8 +1,8 @@
 const app = document.querySelector<HTMLElement>("#app")!;
 const tools = document.querySelector<HTMLElement>("#tools")!;
 
-const CANVAS_WIDTH = 600;
-const CANVAS_HEIGHT = 450;
+const CANVAS_WIDTH = 750;
+const CANVAS_HEIGHT = 500;
 
 const canvas = document.createElement("canvas");
 canvas.width = CANVAS_WIDTH;
@@ -15,8 +15,8 @@ interface Cursor {
 }
 
 const ctx = canvas.getContext("2d");
-
 if (!ctx) throw new Error("Failed to get canvas context");
+ctx.lineCap = "round";
 
 class LineCommand {
   points: [{
@@ -46,15 +46,6 @@ class LineCommand {
   }
 }
 
-let currentLine: LineCommand | null = null;
-let currentStroke = 1;
-const commands: LineCommand[] = [];
-const redoCommands: LineCommand[] = [];
-
-const bus = new EventTarget();
-
-bus.addEventListener("drawing-changed", redraw);
-
 function notify(name: string) {
   bus.dispatchEvent(new Event(name));
 }
@@ -63,6 +54,22 @@ function redraw() {
   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   commands.forEach((command) => command.execute());
 }
+
+function createButton(label: string, callback: () => void): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.textContent = label;
+  button.addEventListener("click", callback);
+  return button;
+}
+
+let currentLine: LineCommand | null = null;
+let currentStroke = 1;
+const commands: LineCommand[] = [];
+const redoCommands: LineCommand[] = [];
+
+const bus = new EventTarget();
+
+bus.addEventListener("drawing-changed", redraw);
 
 canvas.addEventListener("mousedown", (e) => {
   currentLine = new LineCommand(e.offsetX, e.offsetY, currentStroke);
@@ -88,15 +95,11 @@ canvas.addEventListener("mouseleave", () => {
   notify("drawing-changed");
 });
 
-const clear = document.createElement("button");
-clear.textContent = "clear";
-clear.addEventListener("click", () => {
+const clear = createButton("clear", () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
-const undo = document.createElement("button");
-undo.textContent = "undo";
-undo.addEventListener("click", () => {
+const undo = createButton("undo", () => {
   if (commands.length > 0) {
     const command = commands.pop();
 
@@ -107,9 +110,7 @@ undo.addEventListener("click", () => {
   }
 });
 
-const redo = document.createElement("button");
-redo.textContent = "redo";
-redo.addEventListener("click", () => {
+const redo = createButton("redo", () => {
   if (redoCommands.length > 0) {
     const command = redoCommands.pop();
 
@@ -120,15 +121,11 @@ redo.addEventListener("click", () => {
   }
 });
 
-const strokeDecrease = document.createElement("button");
-strokeDecrease.textContent = "-";
-strokeDecrease.addEventListener("click", () => {
-  currentStroke--;
+const strokeDecrease = createButton("-", () => {
+  if (currentStroke > 1) currentStroke--;
 });
 
-const strokeIncrease = document.createElement("button");
-strokeIncrease.textContent = "+";
-strokeIncrease.addEventListener("click", () => {
+const strokeIncrease = createButton("+", () => {
   currentStroke++;
 });
 
