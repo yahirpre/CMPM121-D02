@@ -1,3 +1,5 @@
+import { createECDH } from "node:crypto";
+
 const app = document.querySelector<HTMLElement>("#app")!;
 const tools = document.querySelector<HTMLElement>("#tools")!;
 
@@ -129,5 +131,6 @@ const strokeIncrease = createButton("+", () => {
   currentStroke++;
 });
 
-tools.append(clear, undo, redo, strokeDecrease, strokeIncrease);
+tools.append(clear, undo, redo);
+tools.append(document.createElement("div"), strokeDecrease, strokeIncrease);
 app.append(canvas);

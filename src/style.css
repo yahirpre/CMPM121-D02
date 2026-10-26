@@ -1,12 +1,35 @@
+:root {
+  --border-color: black;
+  --border-size: 4px;
+}
+
+@font-face {
+  font-family: 'dogica-pixel';
+  src: url('assets/dogicapixel.otf') format("opentype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+button {
+  font-family: 'dogica-pixel', sans-serif;
+  margin: 1px;
+  border: 2px solid var(--border-color);
+}
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'dogica-pixel', sans-serif;
+  margin: 8px;
 }
 
 #tools {
   width: 25%;
-  border: 1px solid red;
+  border: var(--border-size) solid var(--border-color);
+
+  margin: 4px;
+  padding: 4px;
 }
 
 canvas {
-  border: 1px solid blue;
+  border: var(--border-size) solid var(--border-color);
+  margin: 4px;
 }
