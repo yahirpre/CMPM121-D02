@@ -29,6 +29,10 @@ body {
   padding: 4px;
 }
 
+#strokeTools {
+  display: flex;
+}
+
 canvas {
   border: var(--border-size) solid var(--border-color);
   margin: 4px;

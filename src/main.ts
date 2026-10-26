@@ -1,7 +1,6 @@
-import { createECDH } from "node:crypto";
-
 const app = document.querySelector<HTMLElement>("#app")!;
 const tools = document.querySelector<HTMLElement>("#tools")!;
+const strokeTools = document.querySelector<HTMLElement>("#strokeTools")!;
 
 const CANVAS_WIDTH = 750;
 const CANVAS_HEIGHT = 500;
@@ -9,12 +8,6 @@ const CANVAS_HEIGHT = 500;
 const canvas = document.createElement("canvas");
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
-
-interface Cursor {
-  active: boolean;
-  x: number;
-  y: number;
-}
 
 const ctx = canvas.getContext("2d");
 if (!ctx) throw new Error("Failed to get canvas context");
@@ -62,6 +55,10 @@ function createButton(label: string, callback: () => void): HTMLButtonElement {
   button.textContent = label;
   button.addEventListener("click", callback);
   return button;
+}
+
+function updateStrokeText() {
+  strokeText.textContent = `Brush Size: ${currentStroke}`;
 }
 
 let currentLine: LineCommand | null = null;
@@ -123,14 +120,19 @@ const redo = createButton("redo", () => {
   }
 });
 
+const strokeText = document.createElement("p");
+strokeText.textContent = `Brush Size: ${currentStroke}`;
+
 const strokeDecrease = createButton("-", () => {
   if (currentStroke > 1) currentStroke--;
+  updateStrokeText();
 });
 
 const strokeIncrease = createButton("+", () => {
   currentStroke++;
+  updateStrokeText();
 });
 
-tools.append(clear, undo, redo);
-tools.append(document.createElement("div"), strokeDecrease, strokeIncrease);
+strokeTools.append(strokeDecrease, strokeText, strokeIncrease);
+tools.append(clear, undo, redo, strokeTools);
 app.append(canvas);
