@@ -1,11 +1,12 @@
 const app = document.querySelector<HTMLElement>("#app")!;
 const tools = document.querySelector<HTMLElement>("#tools")!;
 
-const canvas = document.createElement("canvas");
-canvas.width = 600;
-canvas.height = 450;
+const CANVAS_WIDTH = 600;
+const CANVAS_HEIGHT = 450;
 
-app.append(canvas);
+const canvas = document.createElement("canvas");
+canvas.width = CANVAS_WIDTH;
+canvas.height = CANVAS_HEIGHT;
 
 interface Cursor {
   active: boolean;
@@ -18,10 +19,15 @@ const ctx = canvas.getContext("2d");
 if (!ctx) throw new Error("Failed to get canvas context");
 
 class LineCommand {
-  points;
+  points: [{
+    x: number;
+    y: number;
+  }];
+  stroke: number = 1;
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, stroke: number = 1) {
     this.points = [{ x, y }];
+    this.stroke = stroke;
   }
 
   execute() {
@@ -34,12 +40,14 @@ class LineCommand {
       this.points.forEach(({ x, y }) => {
         ctx.lineTo(x, y);
       });
+      ctx.lineWidth = this.stroke;
       ctx.stroke();
     }
   }
 }
 
 let currentLine: LineCommand | null = null;
+let currentStroke = 1;
 const commands: LineCommand[] = [];
 const redoCommands: LineCommand[] = [];
 
@@ -57,7 +65,7 @@ function redraw() {
 }
 
 canvas.addEventListener("mousedown", (e) => {
-  currentLine = new LineCommand(e.offsetX, e.offsetY);
+  currentLine = new LineCommand(e.offsetX, e.offsetY, currentStroke);
   commands.push(currentLine);
   redoCommands.splice(0, redoCommands.length);
   notify("drawing-changed");
@@ -82,14 +90,12 @@ canvas.addEventListener("mouseleave", () => {
 
 const clear = document.createElement("button");
 clear.textContent = "clear";
-tools.append(clear);
 clear.addEventListener("click", () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
 const undo = document.createElement("button");
 undo.textContent = "undo";
-tools.append(undo);
 undo.addEventListener("click", () => {
   if (commands.length > 0) {
     const command = commands.pop();
@@ -103,7 +109,6 @@ undo.addEventListener("click", () => {
 
 const redo = document.createElement("button");
 redo.textContent = "redo";
-tools.append(redo);
 redo.addEventListener("click", () => {
   if (redoCommands.length > 0) {
     const command = redoCommands.pop();
@@ -114,3 +119,18 @@ redo.addEventListener("click", () => {
     }
   }
 });
+
+const strokeDecrease = document.createElement("button");
+strokeDecrease.textContent = "-";
+strokeDecrease.addEventListener("click", () => {
+  currentStroke--;
+});
+
+const strokeIncrease = document.createElement("button");
+strokeIncrease.textContent = "+";
+strokeIncrease.addEventListener("click", () => {
+  currentStroke++;
+});
+
+tools.append(clear, undo, redo, strokeDecrease, strokeIncrease);
+app.append(canvas);
