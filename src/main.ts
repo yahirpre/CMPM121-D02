@@ -95,7 +95,11 @@ canvas.addEventListener("mouseleave", () => {
 });
 
 const clear = createButton("clear", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  commands.forEach((command) => {
+    redoCommands.push(command);
+  });
+  commands.splice(0, commands.length);
+  notify("drawing-changed");
 });
 
 const undo = createButton("undo", () => {
