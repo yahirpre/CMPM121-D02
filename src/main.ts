@@ -141,13 +141,13 @@ strokeLabel.placeholder = "1";
 strokeLabel.textContent = `${currentStroke}`;
 
 strokeLabel.addEventListener("input", () => {
-  strokeLabel.value = strokeLabel.value.replace(/[^0-9]/g, '');
+  strokeLabel.value = strokeLabel.value.replace(/[^0-9]/g, "");
   const value: number = Number(strokeLabel.value);
-  if (!Number.isNaN(value)){
+  if (!Number.isNaN(value)) {
     currentStroke = value;
   }
   updateStrokeText();
-})
+});
 
 const strokeDecrease = createButton("-", () => {
   if (currentStroke > 1) currentStroke--;
