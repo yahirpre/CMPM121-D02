@@ -58,7 +58,7 @@ function createButton(label: string, callback: () => void): HTMLButtonElement {
 }
 
 function updateStrokeText() {
-  strokeText.textContent = `Brush Size: ${currentStroke}`;
+  strokeLabel.value = `${currentStroke}`;
 }
 
 let currentLine: LineCommand | null = null;
@@ -124,8 +124,30 @@ const redo = createButton("redo", () => {
   }
 });
 
-const strokeText = document.createElement("p");
-strokeText.textContent = `Brush Size: ${currentStroke}`;
+const brushLabel = document.createElement("label");
+brushLabel.textContent = "Brush Size:";
+brushLabel.style = `
+      font-size: 12px;
+      margin-inline: 4px;
+      margin-top: 6px;
+    `;
+
+const strokeLabel = document.createElement("input");
+strokeLabel.type = "input";
+strokeLabel.inputMode = "numeric";
+strokeLabel.maxLength = 3;
+strokeLabel.size = 1;
+strokeLabel.placeholder = "1";
+strokeLabel.textContent = `${currentStroke}`;
+
+strokeLabel.addEventListener("input", () => {
+  strokeLabel.value = strokeLabel.value.replace(/[^0-9]/g, '');
+  const value: number = Number(strokeLabel.value);
+  if (!Number.isNaN(value)){
+    currentStroke = value;
+  }
+  updateStrokeText();
+})
 
 const strokeDecrease = createButton("-", () => {
   if (currentStroke > 1) currentStroke--;
@@ -137,6 +159,6 @@ const strokeIncrease = createButton("+", () => {
   updateStrokeText();
 });
 
-strokeTools.append(strokeDecrease, strokeText, strokeIncrease);
+strokeTools.append(strokeDecrease, brushLabel, strokeLabel, strokeIncrease);
 tools.append(clear, undo, redo, strokeTools);
 app.append(canvas);
