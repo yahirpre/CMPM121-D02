@@ -1,6 +1,24 @@
-# D2 starter
+# Demo 2
 
-A minimal TypeScript/Vite browser project with Deno checks and GitHub Pages deployment.
+A basic user art application using the HTML canvas element.
+
+### GitHub Pages
+
+https://yahirpre.github.io/CMPM121-D02/
+
+## Developers
+
+Yahir Prenger, Andrew Gayed, & Donovan Burrola
+
+## Tools
+
+### Clear, Undo, and Redo
+
+Canvas supports `clear`, `undo`, and `redo`. Any user action held in the redo chain gets deleted once a new action is added to the canvas.
+
+### Brush Size
+
+Users can increment the brush size using the `-` and `+` buttons OR use the `Brush Size:[ ]` input box.
 
 ## Credits
 
