@@ -294,7 +294,7 @@ function renderPalette() {
   });
 }
 
-function exportImage () {
+function exportImage() {
   const exportCanvas = document.createElement("canvas");
 
   const exportScale = 2;
@@ -329,11 +329,8 @@ function exportImage () {
     link.download = "drawing.png";
     link.href = url;
     link.click();
-    
     URL.revokeObjectURL(url);
-  }, "image/png")
-
-
+  }, "image/png");
 }
 
 const toolNameInput = document.createElement("input");
