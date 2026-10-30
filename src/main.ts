@@ -27,6 +27,8 @@ class DrawingDocument {
   history: HistoryAction[] = [];
   redoHistory: HistoryAction[] = [];
 
+  backgroundColor: string = "white";
+
   add(command: DrawingCommand){
     this.commands.push(command);
     this.history.push({ type: "add", command });
@@ -89,10 +91,12 @@ class DrawingDocument {
 class LineCommand implements DrawingCommand {
   points: { x: number; y: number }[];
   stroke: number;
+  color: string;
 
-  constructor(x: number, y: number, stroke: number = 1) {
+  constructor(x: number, y: number, stroke: number = 1, color: string = "black") {
     this.points = [{ x, y }];
     this.stroke = stroke;
+    this.color = color;
   }
 
   execute(target: CanvasRenderingContext2D) {
@@ -100,7 +104,7 @@ class LineCommand implements DrawingCommand {
     target.beginPath();
     target.lineCap = "round";
     target.lineWidth = this.stroke;
-    target.strokeStyle = "black";
+    target.strokeStyle = this.color;
 
     target.moveTo(this.points[0].x, this.points[0].y);
 
@@ -139,8 +143,12 @@ function redraw() {
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  ctx.fillStyle = drawingDocument.backgroundColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
   renderDocument(ctx, drawingDocument.commands);
 
+  
   if (currentLine) {
     currentLine.execute(ctx);
   }
@@ -170,6 +178,7 @@ function updateStrokeText() {
 
 let currentLine: LineCommand | null = null;
 let currentStroke = 1;
+let currentColor = "black";
 
 const drawingDocument = new DrawingDocument();
 
@@ -213,6 +222,7 @@ canvas.addEventListener("mousedown", (e) => {
     e.offsetX,
     e.offsetY,
     currentStroke,
+    currentColor
   );
 
   notify("drawing-changed");
@@ -325,6 +335,45 @@ function renderPalette() {
   });
 }
 
+const colorDiv = document.createElement("div");
+
+const bgColorLabel = document.createElement("label");
+bgColorLabel.textContent = "Background:";
+bgColorLabel.style = `
+      font-size: 12px;
+      margin-inline: 4px;
+      margin-top: 6px;
+    `;
+
+const bgColor = document.createElement("input");
+bgColor.type = "color";
+bgColor.value = drawingDocument.backgroundColor;
+
+bgColor.addEventListener("input", () => {
+  drawingDocument.backgroundColor = bgColor.value;
+  redraw();
+})
+
+const brushColorLabel = document.createElement("label");
+brushColorLabel.textContent = "Brush:";
+brushColorLabel.style = `
+      font-size: 12px;
+      margin-inline: 4px;
+      margin-top: 6px;
+    `;
+
+const brushColor = document.createElement("input");
+brushColor.type = "color";
+brushColor.value = currentColor;
+
+brushColor.addEventListener("input", () => {
+  currentColor = brushColor.value;
+})
+
+colorDiv.append(bgColorLabel, bgColor, brushColorLabel, brushColor);
+
+
+
 function exportImage() {
   const exportCanvas = document.createElement("canvas");
 
@@ -336,7 +385,7 @@ function exportImage() {
   const exportCtx = exportCanvas.getContext("2d");
   if (!exportCtx) return;
 
-  exportCtx.fillStyle = "white";
+  exportCtx.fillStyle = drawingDocument.backgroundColor;
   exportCtx.fillRect(
     0,
     0,
@@ -402,4 +451,4 @@ tools.append(
 
 const exportButton = createButton("Export PNG", exportImage);
 
-tools.append(exportButton);
+tools.append(exportButton, colorDiv);
