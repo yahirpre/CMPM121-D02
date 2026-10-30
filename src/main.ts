@@ -21,6 +21,13 @@ interface DrawingCommand {
   execute(target: CanvasRenderingContext2D): void;
 }
 
+class DrawingDocument {
+  commands: DrawingCommand[] = [];
+
+  history: HistoryAction[] = [];
+  redoHistory: HistoryAction[] = [];
+}
+
 class LineCommand implements DrawingCommand {
   points: { x: number; y: number }[];
   stroke: number;
@@ -74,7 +81,7 @@ function redraw() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  commands.forEach((command) => command.execute(ctx));
+  drawingDocument.commands.forEach((command) => command.execute(ctx));
 
   if (currentLine) {
     currentLine.execute(ctx);
@@ -95,10 +102,7 @@ function updateStrokeText() {
 let currentLine: LineCommand | null = null;
 let currentStroke = 1;
 
-const history: HistoryAction[] = [];
-const redoHistory: HistoryAction[] = [];
-
-const commands: DrawingCommand[] = [];
+const drawingDocument = new DrawingDocument();
 
 const bus = new EventTarget();
 
@@ -116,9 +120,9 @@ const stickerTools: ToolDefinition[] = [
 let selectedTool: ToolDefinition | null = null;
 
 function addDrawingCommand(command: DrawingCommand) {
-  commands.push(command);
-  history.push({ type: "add", command });
-  redoHistory.length = 0;
+  drawingDocument.commands.push(command);
+  drawingDocument.history.push({ type: "add", command });
+  drawingDocument.redoHistory.length = 0;
   notify("drawing-changed");
 }
 
@@ -179,32 +183,32 @@ document.addEventListener("keydown", (e) => {
 });
 
 const clear = createButton("clear", () => {
-  if (commands.length === 0) {
+  if (drawingDocument.commands.length === 0) {
     return;
   }
 
-  history.push({ type: "clear", commands: [...commands] });
+  drawingDocument.history.push({ type: "clear", commands: [...drawingDocument.commands] });
 
-  commands.splice(0, commands.length);
-  redoHistory.length = 0;
+  drawingDocument.commands.splice(0, drawingDocument.commands.length);
+  drawingDocument.redoHistory.length = 0;
 
   notify("drawing-changed");
 });
 
 const undo = createButton("undo", () => {
-  const action = history.pop();
+  const action = drawingDocument.history.pop();
   if (!action) {
     return;
   }
 
   if (action.type === "clear") {
-    commands.push(...action.commands);
+    drawingDocument.commands.push(...action.commands);
   } else if (action.type === "add") {
-    const foundAt = commands.indexOf(action.command);
+    const foundAt = drawingDocument.commands.indexOf(action.command);
 
     // a {-1} value here means that the history command is nowhere seen in the list
     if (foundAt !== -1) {
-      commands.splice(foundAt, 1);
+      drawingDocument.commands.splice(foundAt, 1);
     }
     // we check because it is not guaranteed to have matching sizes between history/commands
     // Ex. History: {type: 'blah', cmds: [da, ra, fo]}, {type: "boo", cmds: hehe}
@@ -212,24 +216,24 @@ const undo = createButton("undo", () => {
     //    length is 2 compared to 4
   }
 
-  redoHistory.push(action);
+  drawingDocument.redoHistory.push(action);
   notify("drawing-changed");
 });
 
 const redo = createButton("redo", () => {
-  const action = redoHistory.pop();
+  const action = drawingDocument.redoHistory.pop();
 
   if (!action) {
     return;
   }
 
   if (action.type === "clear") {
-    commands.splice(0, commands.length);
+    drawingDocument.commands.splice(0, drawingDocument.commands.length);
   } else if (action.type === "add") {
-    commands.push(action.command);
+    drawingDocument.commands.push(action.command);
   }
 
-  history.push(action);
+  drawingDocument.history.push(action);
   notify("drawing-changed");
 });
 
@@ -315,7 +319,7 @@ function exportImage() {
     canvas.height,
   );
 
-  commands.forEach((command) => command.execute(exportCtx));
+  drawingDocument.commands.forEach((command) => command.execute(exportCtx));
 
   exportCanvas.toBlob((blob) => {
     if (!blob) {
