@@ -14,7 +14,7 @@ if (!ctx) throw new Error("Failed to get canvas context");
 ctx.lineCap = "round";
 
 type HistoryAction =
-  | { type: "line"; command: DrawingCommand }
+  | { type: "add"; command: DrawingCommand }
   | { type: "clear"; commands: DrawingCommand[] };
 
 interface DrawingCommand {
@@ -117,7 +117,7 @@ let selectedTool: ToolDefinition | null = null;
 
 function addDrawingCommand(command: DrawingCommand) {
   commands.push(command);
-  history.push({ type: "line", command });
+  history.push({ type: "add", command });
   redoHistory.length = 0;
   notify("drawing-changed");
 }
@@ -199,7 +199,7 @@ const undo = createButton("undo", () => {
 
   if (action.type === "clear") {
     commands.push(...action.commands);
-  } else if (action.type === "line") {
+  } else if (action.type === "add") {
     const foundAt = commands.indexOf(action.command);
 
     // a {-1} value here means that the history command is nowhere seen in the list
@@ -225,7 +225,7 @@ const redo = createButton("redo", () => {
 
   if (action.type === "clear") {
     commands.splice(0, commands.length);
-  } else if (action.type === "line") {
+  } else if (action.type === "add") {
     commands.push(action.command);
   }
 
@@ -294,45 +294,7 @@ function renderPalette() {
   });
 }
 
-const toolNameInput = document.createElement("input");
-toolNameInput.placeholder = "Tool name";
-
-const toolContentInput = document.createElement("input");
-toolContentInput.placeholder = "Emoji or text";
-
-const createToolButton = createButton("Create Tool", () => {
-  const name = toolNameInput.value.trim();
-  const content = toolContentInput.value.trim();
-
-  if (!content) return;
-
-  stickerTools.push({
-    name: name || content,
-    content,
-  });
-
-  toolNameInput.value = "";
-  toolContentInput.value = "";
-
-  renderPalette();
-});
-
-const cancelButton = createButton("Cancel", () => {
-  toolNameInput.value = "";
-  toolContentInput.value = "";
-});
-
-renderPalette();
-
-tools.append(
-  palette,
-  toolNameInput,
-  toolContentInput,
-  createToolButton,
-  cancelButton,
-);
-
-const exportButton = createButton("Export PNG", () => {
+function exportImage () {
   const exportCanvas = document.createElement("canvas");
 
   const exportScale = 2;
@@ -372,6 +334,46 @@ const exportButton = createButton("Export PNG", () => {
   }, "image/png")
 
 
+}
+
+const toolNameInput = document.createElement("input");
+toolNameInput.placeholder = "Tool name";
+
+const toolContentInput = document.createElement("input");
+toolContentInput.placeholder = "Emoji or text";
+
+const createToolButton = createButton("Create Tool", () => {
+  const name = toolNameInput.value.trim();
+  const content = toolContentInput.value.trim();
+
+  if (!content) return;
+
+  stickerTools.push({
+    name: name || content,
+    content,
+  });
+
+  toolNameInput.value = "";
+  toolContentInput.value = "";
+
+  renderPalette();
 });
+
+const cancelButton = createButton("Cancel", () => {
+  toolNameInput.value = "";
+  toolContentInput.value = "";
+});
+
+renderPalette();
+
+tools.append(
+  palette,
+  toolNameInput,
+  toolContentInput,
+  createToolButton,
+  cancelButton,
+);
+
+const exportButton = createButton("Export PNG", exportImage);
 
 tools.append(exportButton);
