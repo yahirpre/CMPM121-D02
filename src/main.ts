@@ -29,13 +29,13 @@ class DrawingDocument {
 
   backgroundColor: string = "white";
 
-  add(command: DrawingCommand){
+  add(command: DrawingCommand) {
     this.commands.push(command);
     this.history.push({ type: "add", command });
     this.redoHistory.length = 0;
   }
 
-  clear(){
+  clear() {
     if (this.commands.length === 0) {
       return;
     }
@@ -46,7 +46,7 @@ class DrawingDocument {
     this.redoHistory.length = 0;
   }
 
-  undo(){
+  undo() {
     const action = this.history.pop();
     if (!action) {
       return;
@@ -70,7 +70,7 @@ class DrawingDocument {
     this.redoHistory.push(action);
   }
 
-  redo(){
+  redo() {
     const action = this.redoHistory.pop();
 
     if (!action) {
@@ -85,7 +85,6 @@ class DrawingDocument {
 
     this.history.push(action);
   }
-
 }
 
 class LineCommand implements DrawingCommand {
@@ -93,7 +92,12 @@ class LineCommand implements DrawingCommand {
   stroke: number;
   color: string;
 
-  constructor(x: number, y: number, stroke: number = 1, color: string = "black") {
+  constructor(
+    x: number,
+    y: number,
+    stroke: number = 1,
+    color: string = "black",
+  ) {
     this.points = [{ x, y }];
     this.stroke = stroke;
     this.color = color;
@@ -148,20 +152,23 @@ function redraw() {
 
   renderDocument(ctx, drawingDocument.commands);
 
-  
   if (currentLine) {
     currentLine.execute(ctx);
   }
 }
 
-function renderDocument(canvas: CanvasRenderingContext2D, commands: DrawingCommand[], scale: number = 1){
+function renderDocument(
+  canvas: CanvasRenderingContext2D,
+  commands: DrawingCommand[],
+  scale: number = 1,
+) {
   canvas.save();
   canvas.scale(scale, scale);
 
   commands.forEach((command) => {
     command.execute(canvas);
-  })
-  
+  });
+
   canvas.restore();
 }
 
@@ -222,7 +229,7 @@ canvas.addEventListener("mousedown", (e) => {
     e.offsetX,
     e.offsetY,
     currentStroke,
-    currentColor
+    currentColor,
   );
 
   notify("drawing-changed");
@@ -352,7 +359,7 @@ bgColor.value = drawingDocument.backgroundColor;
 bgColor.addEventListener("input", () => {
   drawingDocument.backgroundColor = bgColor.value;
   redraw();
-})
+});
 
 const brushColorLabel = document.createElement("label");
 brushColorLabel.textContent = "Brush:";
@@ -368,11 +375,9 @@ brushColor.value = currentColor;
 
 brushColor.addEventListener("input", () => {
   currentColor = brushColor.value;
-})
+});
 
 colorDiv.append(bgColorLabel, bgColor, brushColorLabel, brushColor);
-
-
 
 function exportImage() {
   const exportCanvas = document.createElement("canvas");
