@@ -349,16 +349,29 @@ const exportButton = createButton("Export PNG", () => {
   exportCtx.fillRect(
     0,
     0,
-    exportCanvas.width,
-    exportCanvas.height,
+    canvas.width,
+    canvas.height,
   );
 
   commands.forEach((command) => command.execute(exportCtx));
 
-  const link = document.createElement("a");
-  link.download = "drawing.png";
-  link.href = exportCanvas.toDataURL("image/png");
-  link.click();
+  exportCanvas.toBlob((blob) => {
+    if (!blob) {
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.download = "drawing.png";
+    link.href = url;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+  }, "image/png")
+
+
 });
 
 tools.append(exportButton);
