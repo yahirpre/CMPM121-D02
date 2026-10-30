@@ -14,34 +14,54 @@ if (!ctx) throw new Error("Failed to get canvas context");
 ctx.lineCap = "round";
 
 type HistoryAction =
-  | { type: "line"; command: LineCommand }
-  | { type: "clear"; commands: LineCommand[] };
+  | { type: "line"; command: DrawingCommand }
+  | { type: "clear"; commands: DrawingCommand[] };
 
-class LineCommand {
-  points: [{
-    x: number;
-    y: number;
-  }];
-  stroke: number = 1;
+interface DrawingCommand {
+  execute(target: CanvasRenderingContext2D): void;
+}
+
+class LineCommand implements DrawingCommand {
+  points: { x: number; y: number }[];
+  stroke: number;
 
   constructor(x: number, y: number, stroke: number = 1) {
     this.points = [{ x, y }];
     this.stroke = stroke;
   }
 
-  execute() {
-    if (ctx) {
-      ctx.beginPath();
+  execute(target: CanvasRenderingContext2D) {
+    target.save();
+    target.beginPath();
+    target.lineCap = "round";
+    target.lineWidth = this.stroke;
+    target.strokeStyle = "black";
 
-      const { x, y } = this.points[0];
+    target.moveTo(this.points[0].x, this.points[0].y);
 
-      ctx.moveTo(x, y);
-      this.points.forEach(({ x, y }) => {
-        ctx.lineTo(x, y);
-      });
-      ctx.lineWidth = this.stroke;
-      ctx.stroke();
+    for (const point of this.points) {
+      target.lineTo(point.x, point.y);
     }
+
+    target.stroke();
+    target.restore();
+  }
+}
+
+class StickerCommand implements DrawingCommand {
+  constructor(
+    public x: number,
+    public y: number,
+    public content: string,
+  ) {}
+
+  execute(target: CanvasRenderingContext2D) {
+    target.save();
+    target.font = "40px sans-serif";
+    target.textAlign = "center";
+    target.textBaseline = "middle";
+    target.fillText(this.content, this.x, this.y);
+    target.restore();
   }
 }
 
@@ -50,8 +70,15 @@ function notify(name: string) {
 }
 
 function redraw() {
-  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-  commands.forEach((command) => command.execute());
+  if (!ctx) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  commands.forEach((command) => command.execute(ctx));
+
+  if (currentLine) {
+    currentLine.execute(ctx);
+  }
 }
 
 function createButton(label: string, callback: () => void): HTMLButtonElement {
@@ -71,37 +98,84 @@ let currentStroke = 1;
 const history: HistoryAction[] = [];
 const redoHistory: HistoryAction[] = [];
 
-const commands: LineCommand[] = [];
+const commands: DrawingCommand[] = [];
 
 const bus = new EventTarget();
+
+type ToolDefinition = {
+  name: string;
+  content: string;
+};
+
+const stickerTools: ToolDefinition[] = [
+  { name: "Star", content: "⭐" },
+  { name: "Heart", content: "❤️" },
+  { name: "Smile", content: "😀" },
+];
+
+let selectedTool: ToolDefinition | null = null;
+
+function addDrawingCommand(command: DrawingCommand) {
+  commands.push(command);
+  history.push({ type: "line", command });
+  redoHistory.length = 0;
+  notify("drawing-changed");
+}
 
 bus.addEventListener("drawing-changed", redraw);
 
 canvas.addEventListener("mousedown", (e) => {
-  currentLine = new LineCommand(e.offsetX, e.offsetY, currentStroke);
-  commands.push(currentLine);
+  if (e.button !== 0) return;
 
-  history.push({ type: "line", command: currentLine });
-  redoHistory.splice(0, redoHistory.length);
+  if (selectedTool) {
+    const sticker = new StickerCommand(
+      e.offsetX,
+      e.offsetY,
+      selectedTool.content,
+    );
+
+    addDrawingCommand(sticker);
+    return;
+  }
+
+  currentLine = new LineCommand(
+    e.offsetX,
+    e.offsetY,
+    currentStroke,
+  );
 
   notify("drawing-changed");
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (e.buttons == 1) {
-    if (currentLine) currentLine.points.push({ x: e.offsetX, y: e.offsetY });
+  if (e.buttons === 1 && currentLine) {
+    currentLine.points.push({
+      x: e.offsetX,
+      y: e.offsetY,
+    });
+
     notify("drawing-changed");
   }
 });
 
 canvas.addEventListener("mouseup", () => {
-  currentLine = null;
-  notify("drawing-changed");
+  if (currentLine) {
+    const completedLine = currentLine;
+    currentLine = null;
+    addDrawingCommand(completedLine);
+  }
 });
 
 canvas.addEventListener("mouseleave", () => {
   currentLine = null;
   notify("drawing-changed");
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    currentLine = null;
+    notify("drawing-changed");
+  }
 });
 
 const clear = createButton("clear", () => {
@@ -112,7 +186,7 @@ const clear = createButton("clear", () => {
   history.push({ type: "clear", commands: [...commands] });
 
   commands.splice(0, commands.length);
-  redoHistory.splice(0, commands.length);
+  redoHistory.length = 0;
 
   notify("drawing-changed");
 });
@@ -168,12 +242,12 @@ brushLabel.style = `
     `;
 
 const strokeLabel = document.createElement("input");
-strokeLabel.type = "input";
+strokeLabel.type = "text";
 strokeLabel.inputMode = "numeric";
 strokeLabel.maxLength = 3;
 strokeLabel.size = 1;
 strokeLabel.placeholder = "1";
-strokeLabel.textContent = `${currentStroke}`;
+strokeLabel.value = `${currentStroke}`;
 
 strokeLabel.addEventListener("input", () => {
   strokeLabel.value = strokeLabel.value.replace(/[^0-9]/g, "");
@@ -197,3 +271,89 @@ const strokeIncrease = createButton("+", () => {
 strokeTools.append(strokeDecrease, brushLabel, strokeLabel, strokeIncrease);
 tools.append(clear, undo, redo, strokeTools);
 app.append(canvas);
+
+const palette = document.createElement("div");
+
+function renderPalette() {
+  palette.replaceChildren();
+
+  const brushButton = createButton("Brush", () => {
+    selectedTool = null;
+    renderPalette();
+  });
+
+  palette.append(brushButton);
+
+  stickerTools.forEach((tool) => {
+    const button = createButton(tool.name, () => {
+      selectedTool = tool;
+      renderPalette();
+    });
+
+    palette.append(button);
+  });
+}
+
+const toolNameInput = document.createElement("input");
+toolNameInput.placeholder = "Tool name";
+
+const toolContentInput = document.createElement("input");
+toolContentInput.placeholder = "Emoji or text";
+
+const createToolButton = createButton("Create Tool", () => {
+  const name = toolNameInput.value.trim();
+  const content = toolContentInput.value.trim();
+
+  if (!content) return;
+
+  stickerTools.push({
+    name: name || content,
+    content,
+  });
+
+  toolNameInput.value = "";
+  toolContentInput.value = "";
+
+  renderPalette();
+});
+
+const cancelButton = createButton("Cancel", () => {
+  toolNameInput.value = "";
+  toolContentInput.value = "";
+});
+
+renderPalette();
+
+tools.append(
+  palette,
+  toolNameInput,
+  toolContentInput,
+  createToolButton,
+  cancelButton,
+);
+
+const exportButton = createButton("Export PNG", () => {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = canvas.width;
+  exportCanvas.height = canvas.height;
+
+  const exportCtx = exportCanvas.getContext("2d");
+  if (!exportCtx) return;
+
+  exportCtx.fillStyle = "white";
+  exportCtx.fillRect(
+    0,
+    0,
+    exportCanvas.width,
+    exportCanvas.height,
+  );
+
+  commands.forEach((command) => command.execute(exportCtx));
+
+  const link = document.createElement("a");
+  link.download = "drawing.png";
+  link.href = exportCanvas.toDataURL("image/png");
+  link.click();
+});
+
+tools.append(exportButton);
