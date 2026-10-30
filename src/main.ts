@@ -334,11 +334,16 @@ tools.append(
 
 const exportButton = createButton("Export PNG", () => {
   const exportCanvas = document.createElement("canvas");
-  exportCanvas.width = canvas.width;
-  exportCanvas.height = canvas.height;
+
+  const exportScale = 2;
+
+  exportCanvas.width = canvas.width * exportScale;
+  exportCanvas.height = canvas.height * exportScale;
 
   const exportCtx = exportCanvas.getContext("2d");
   if (!exportCtx) return;
+
+  exportCtx.scale(exportScale, exportScale);
 
   exportCtx.fillStyle = "white";
   exportCtx.fillRect(
