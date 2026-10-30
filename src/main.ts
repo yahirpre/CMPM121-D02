@@ -13,6 +13,10 @@ const ctx = canvas.getContext("2d");
 if (!ctx) throw new Error("Failed to get canvas context");
 ctx.lineCap = "round";
 
+type HistoryAction =
+  | { type: "line"; command: LineCommand }
+  | { type: "clear"; commands: LineCommand[] };
+
 class LineCommand {
   points: [{
     x: number;
@@ -63,8 +67,11 @@ function updateStrokeText() {
 
 let currentLine: LineCommand | null = null;
 let currentStroke = 1;
+
+const history: HistoryAction[] = [];
+const redoHistory: HistoryAction[] = [];
+
 const commands: LineCommand[] = [];
-const redoCommands: LineCommand[] = [];
 
 const bus = new EventTarget();
 
@@ -73,7 +80,10 @@ bus.addEventListener("drawing-changed", redraw);
 canvas.addEventListener("mousedown", (e) => {
   currentLine = new LineCommand(e.offsetX, e.offsetY, currentStroke);
   commands.push(currentLine);
-  redoCommands.splice(0, redoCommands.length);
+
+  history.push({ type: "line", command: currentLine });
+  redoHistory.splice(0, redoHistory.length);
+
   notify("drawing-changed");
 });
 
@@ -95,33 +105,58 @@ canvas.addEventListener("mouseleave", () => {
 });
 
 const clear = createButton("clear", () => {
-  commands.forEach((command) => {
-    redoCommands.push(command);
-  });
+  if (commands.length === 0) {
+    return;
+  }
+
+  history.push({ type: "clear", commands: [...commands] });
+
   commands.splice(0, commands.length);
+  redoHistory.splice(0, commands.length);
+
   notify("drawing-changed");
 });
 
 const undo = createButton("undo", () => {
-  if (commands.length > 0) {
-    const command = commands.pop();
-
-    if (command) {
-      redoCommands.push(command);
-      notify("drawing-changed");
-    }
+  const action = history.pop();
+  if (!action) {
+    return;
   }
+
+  if (action.type === "clear") {
+    commands.push(...action.commands);
+  } else if (action.type === "line") {
+    const foundAt = commands.indexOf(action.command);
+
+    // a {-1} value here means that the history command is nowhere seen in the list
+    if (foundAt !== -1) {
+      commands.splice(foundAt, 1);
+    }
+    // we check because it is not guaranteed to have matching sizes between history/commands
+    // Ex. History: {type: 'blah', cmds: [da, ra, fo]}, {type: "boo", cmds: hehe}
+    //     Commands: da, ra, fo, hehe
+    //    length is 2 compared to 4
+  }
+
+  redoHistory.push(action);
+  notify("drawing-changed");
 });
 
 const redo = createButton("redo", () => {
-  if (redoCommands.length > 0) {
-    const command = redoCommands.pop();
+  const action = redoHistory.pop();
 
-    if (command) {
-      commands.push(command);
-      notify("drawing-changed");
-    }
+  if (!action) {
+    return;
   }
+
+  if (action.type === "clear") {
+    commands.splice(0, commands.length);
+  } else if (action.type === "line") {
+    commands.push(action.command);
+  }
+
+  history.push(action);
+  notify("drawing-changed");
 });
 
 const brushLabel = document.createElement("label");
