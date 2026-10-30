@@ -125,6 +125,7 @@ class StickerCommand implements DrawingCommand {
     target.font = "40px sans-serif";
     target.textAlign = "center";
     target.textBaseline = "middle";
+    target.fillStyle = "black";
     target.fillText(this.content, this.x, this.y);
     target.restore();
   }
